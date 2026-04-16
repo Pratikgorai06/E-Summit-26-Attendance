@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: attendees
+    // Document ID: Roll Number or Team ID (string)
+    // Fields:
+    //   - remainingBalance: number (required) - The remaining balance in ₹.
+    //
+    // ===============================================================
+    
+    // Helper Functions
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isValidAttendee(data) {
+      return hasOnlyAllowedFields(['remainingBalance', 'type']) &&
+             data.remainingBalance is number &&
+             data.remainingBalance >= 0 &&
+             data.type in ['team', 'roll'];
+    }
+
+    function isValidTransaction(data) {
+      return hasOnlyAllowedFields(['attendeeId', 'amount', 'items', 'timestamp']) &&
+             data.attendeeId is string &&
+             data.amount is number &&
+             data.items is list &&
+             data.timestamp is timestamp;
+    }
+
+    match /attendees/{attendeeId} {
+      allow read: if true;
+      allow create: if isValidAttendee(request.resource.data);
+      allow update: if isValidAttendee(request.resource.data);
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow create: if isValidTransaction(request.resource.data);
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Attendee": {
+      "title": "Attendee",
+      "description": "An event attendee with a virtual wallet balance.",
+      "type": "object",
+      "properties": {
+        "remainingBalance": {
+          "type": "number",
+          "description": "The remaining balance of the attendee in ₹."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["team", "roll"],
+          "description": "The type of attendee (team or roll number)."
+        }
+      },
+      "required": ["remainingBalance", "type"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A record of a wallet deduction.",
+      "type": "object",
+      "properties": {
+        "attendeeId": { "type": "string" },
+        "amount": { "type": "number" },
+        "items": { "type": "array", "items": { "type": "string" } },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["attendeeId", "amount", "items", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/attendees/{attendeeId}": {
+      "schema": {
+        "$ref": "#/entities/Attendee"
+      },
+      "description": "Stores the virtual wallet balance for each attendee."
+    },
+    "/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/Transaction"
+      },
+      "description": "Audit log of all transactions."
+    }
+  }
+}

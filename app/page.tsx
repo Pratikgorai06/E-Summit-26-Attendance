@@ -22,6 +22,7 @@ import {
   Users,
   Hash,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 type SearchMode = "team" | "roll";
 
@@ -33,8 +34,8 @@ interface PendingTransaction {
 }
 
 export default function Dashboard() {
+  const { isAuthenticated, isLoading, login, logout } = useAuth();
   const [passcode, setPasscode] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchMode, setSearchMode] = useState<SearchMode>("team");
   const [searchId, setSearchId] = useState("");
   const [attendee, setAttendee] = useState<{
@@ -52,14 +53,15 @@ export default function Dashboard() {
   const [undoTimer, setUndoTimer] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === process.env.NEXT_PUBLIC_PASSCODE) {
-      setIsAuthenticated(true);
-      setError(null);
-    } else {
-      setError("Invalid passcode");
+    setLoading(true);
+    setError(null);
+    const result = await login(passcode);
+    if (!result.success) {
+      setError(result.error || "Login failed");
     }
+    setLoading(false);
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -67,9 +69,9 @@ export default function Dashboard() {
     const id = searchId.trim().toUpperCase();
     if (!id) return;
 
-    // Roll Number Validation
-    if (searchMode === "roll" && !/^\d{11}$/.test(id)) {
-      setError("Roll number must be exactly 11 digits");
+    // Roll Number Validation (6 or 11 digits)
+    if (searchMode === "roll" && !/^(\d{6}|\d{11})$/.test(id)) {
+      setError("Roll number must be exactly 6 or 11 digits");
       return;
     }
 
@@ -213,6 +215,15 @@ export default function Dashboard() {
     };
   }, [undoTimer, pendingTx]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Loading session...</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -245,8 +256,10 @@ export default function Dashboard() {
             )}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Access Dashboard
             </button>
           </form>
@@ -266,7 +279,7 @@ export default function Dashboard() {
             </h1>
           </div>
           <button
-            onClick={() => setIsAuthenticated(false)}
+            onClick={logout}
             className="text-gray-500 hover:text-gray-700 p-2"
           >
             <LogOut className="w-5 h-5" />
@@ -310,7 +323,7 @@ export default function Dashboard() {
                 placeholder={
                   searchMode === "team"
                     ? "Enter Team ID"
-                    : "Enter 11-digit Roll No."
+                    : "Enter 6 or 11-digit Roll No."
                 }
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
               />
